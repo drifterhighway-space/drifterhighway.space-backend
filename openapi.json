@@ -1,0 +1,1026 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Drifter Highway Space API",
+        "description": "EVE Online authentication and character management API",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:3000",
+            "description": "Local development server"
+        },
+        {
+            "url": "https://drifterhighway.space",
+            "description": "Production server"
+        }
+    ],
+    "paths": {
+        "/auth/eve/login": {
+            "post": {
+                "tags": ["Authentication"],
+                "summary": "EVE Online Login",
+                "description": "Handle OAuth callback from EVE Online authentication. Exchange authorization code for EVE tokens, retrieve character ID from decoded token, create or update user and character records if they don't exist, and generate JWT token with 30-minute expiration. Returns the application JWT token to the client.",
+                "operationId": "LoginEve",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "description": "OAuth authorization code from EVE Online"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful, JWT token returned",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/JWTToken"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error - user or character insertion failed"
+                    }
+                }
+            }
+        },
+        "/auth/eve/login/add": {
+            "post": {
+                "tags": ["Authentication"],
+                "summary": "Add EVE Character",
+                "description": "Add an EVE character if the user exists, or update the refresh token for an existing character. Checks if character exists in database, creates new character record if it doesn't exist, or updates refreshToken if character exists. Both features are currently marked as TODO in implementation.",
+                "operationId": "AddEve",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Character added or refresh token updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized - valid JWT token required"
+                    }
+                }
+            }
+        },
+        "/auth/discord/login": {
+            "post": {
+                "tags": ["Authentication"],
+                "summary": "Discord Login",
+                "description": "Handle OAuth callback from Discord authentication. Currently under development. Future implementation will exchange Discord OAuth code for tokens, validate Discord user data, associate Discord account with EVE character, generate application JWT token, and return token to client. Requires authentication for OAuth callback handling.",
+                "operationId": "LoginDiscord",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Discord login successful"
+                    },
+                    "401": {
+                        "description": "Unauthorized - valid JWT token required"
+                    }
+                }
+            }
+        },
+        "/characters": {
+            "get": {
+                "tags": ["Characters"],
+                "summary": "Get All Characters",
+                "description": "Retrieve all active characters from the database.",
+                "operationId": "GetCharacters",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Which page of results to return",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "How many results to return",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of characters",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Character"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - valid JWT token required"
+                    },
+                    "404": {
+                        "description": "No characters found"
+                    }
+                }
+            },
+            "put": {
+                "tags": ["Characters"],
+                "summary": "Update Character",
+                "description": "Update a character by ID.",
+                "operationId": "UpdateCharacter",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "Character ID"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CharacterUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Character updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Character"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": ["Characters"],
+                "summary": "Delete Character",
+                "description": "Delete (deactivate) a character by ID. Character is marked as Inactive.",
+                "operationId": "DeleteCharacter",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "Character ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Character deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/characters/{id}": {
+            "get": {
+                "tags": ["Characters"],
+                "summary": "Get Character by ID",
+                "description": "Retrieve a specific character by ID.",
+                "operationId": "GetCharacter",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "Character ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Character found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Character"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            },
+            "put": {
+                "tags": ["Characters"],
+                "summary": "Update Character by ID",
+                "description": "Update a specific character.",
+                "operationId": "UpdateCharacterById",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "Character ID"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CharacterUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Character updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Character"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": ["Characters"],
+                "summary": "Delete Character by ID",
+                "description": "Delete (deactivate) a specific character.",
+                "operationId": "DeleteCharacterById",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "Character ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Character deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/corporations": {
+            "get": {
+                "tags": ["Corporations"],
+                "summary": "Get All Corporations",
+                "description": "Retrieve all corporations from the database.",
+                "operationId": "GetCorporations",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Which page of results to return",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "How many results to return",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of corporations",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Corporation"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - valid JWT token required"
+                    },
+                    "404": {
+                        "description": "No corporations found"
+                    }
+                }
+            },
+            "put": {
+                "tags": ["Corporations"],
+                "summary": "Update Corporation",
+                "description": "Update a corporation by ID.",
+                "operationId": "UpdateCorporation",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "Corporation ID"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CorporationUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Corporation updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Corporation"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": ["Corporations"],
+                "summary": "Delete Corporation",
+                "description": "Delete (deactivate) a corporation by ID.",
+                "operationId": "DeleteCorporation",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "Corporation ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Corporation deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/corporations/{id}": {
+            "get": {
+                "tags": ["Corporations"],
+                "summary": "Get Corporation by ID",
+                "description": "Retrieve a specific corporation by ID.",
+                "operationId": "GetCorporation",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "Corporation ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Corporation found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Corporation"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            },
+            "put": {
+                "tags": ["Corporations"],
+                "summary": "Update Corporation by ID",
+                "description": "Update a specific corporation.",
+                "operationId": "UpdateCorporationById",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "Corporation ID"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CorporationUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Corporation updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Corporation"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": ["Corporations"],
+                "summary": "Delete Corporation by ID",
+                "description": "Delete (deactivate) a specific corporation.",
+                "operationId": "DeleteCorporationById",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "Corporation ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Corporation deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/users": {
+            "get": {
+                "tags": ["Users"],
+                "summary": "Get All Users",
+                "description": "Retrieve all active users from the database.",
+                "operationId": "GetUsers",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Which page of results to return",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "How many results to return",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of users",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/User"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - valid JWT token required"
+                    },
+                    "404": {
+                        "description": "No users found"
+                    }
+                }
+            },
+            "put": {
+                "tags": ["Users"],
+                "summary": "Update User",
+                "description": "Update a user by ID.",
+                "operationId": "UpdateUser",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "User ID"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": ["Users"],
+                "summary": "Delete User",
+                "description": "Delete (deactivate) a user by ID. User is marked as Inactive.",
+                "operationId": "DeleteUser",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "User ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/users/{id}": {
+            "get": {
+                "tags": ["Users"],
+                "summary": "Get User by ID",
+                "description": "Retrieve a specific user by ID.",
+                "operationId": "GetUser",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "User ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            },
+            "put": {
+                "tags": ["Users"],
+                "summary": "Update User by ID",
+                "description": "Update a specific user.",
+                "operationId": "UpdateUserById",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "User ID"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": ["Users"],
+                "summary": "Delete User by ID",
+                "description": "Delete (deactivate) a specific user.",
+                "operationId": "DeleteUserById",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "description": "User ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "JWT Bearer Token for authentication"
+            }
+        },
+        "schemas": {
+            "JWTToken": {
+                "type": "object",
+                "description": "JWT authentication token returned on successful login",
+                "properties": {
+                    "token": {
+                        "type": "string",
+                        "description": "The JWT token string"
+                    }
+                }
+            },
+            "User": {
+                "type": "object",
+                "description": "User entity from the database",
+                "properties": {
+                    "ID": {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Unique identifier for the user"
+                    },
+                    "Name": {
+                        "type": "string",
+                        "description": "Name of the user"
+                    },
+                    "Status": {
+                        "type": "string",
+                        "description": "Status of the user (Active/Inactive)",
+                        "enum": ["Active", "Inactive"]
+                    },
+                    "DiscordID": {
+                        "type": "string",
+                        "description": "Optional Discord ID for the user"
+                    }
+                }
+            },
+            "UserUpdate": {
+                "type": "object",
+                "description": "Request body for updating a user",
+                "properties": {
+                    "Name": {
+                        "type": "string",
+                        "description": "New name for the user"
+                    },
+                    "DiscordID": {
+                        "type": "string",
+                        "description": "Discord ID for the user"
+                    }
+                }
+            },
+            "Character": {
+                "type": "object",
+                "description": "Character entity from the database",
+                "properties": {
+                    "ID": {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Unique identifier for the character"
+                    },
+                    "Name": {
+                        "type": "string",
+                        "description": "Name of the character"
+                    },
+                    "User": {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "ID of the user who owns this character"
+                    },
+                    "Corporation": {
+                        "type": "object",
+                        "description": "Associated corporation",
+                        "properties": {
+                            "ID": {
+                                "type": "integer",
+                                "format": "int64",
+                                "description": "Corporation ID"
+                            },
+                            "Name": {
+                                "type": "string",
+                                "description": "Corporation name"
+                            }
+                        }
+                    },
+                    "Status": {
+                        "type": "string",
+                        "description": "Status of the character",
+                        "enum": [
+                            "Active",
+                            "Inactive",
+                            "InvalidToken",
+                            "Pending"
+                        ]
+                    },
+                    "RefreshToken": {
+                        "type": "string",
+                        "description": "Optional refresh token for authentication"
+                    },
+                    "AccessToken": {
+                        "type": "string",
+                        "description": "Optional access token for authentication"
+                    },
+                    "Ship": {
+                        "type": "object",
+                        "description": "Optional ship owned by this character",
+                        "properties": {
+                            "ID": {
+                                "type": "integer",
+                                "format": "int64"
+                            },
+                            "Name": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "CharacterUpdate": {
+                "type": "object",
+                "description": "Request body for updating a character",
+                "properties": {
+                    "Name": {
+                        "type": "string",
+                        "description": "New name for the character"
+                    }
+                }
+            },
+            "Corporation": {
+                "type": "object",
+                "description": "Corporation entity from the database",
+                "properties": {
+                    "ID": {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Unique identifier for the corporation"
+                    },
+                    "Name": {
+                        "type": "string",
+                        "description": "Name of the corporation"
+                    },
+                    "Type": {
+                        "type": "string",
+                        "description": "Type of group entity (Corporation/Alliance)",
+                        "enum": ["Corporation", "Alliance"]
+                    },
+                    "Parent": {
+                        "type": "object",
+                        "description": "Optional parent group entity reference",
+                        "properties": {
+                            "ID": {
+                                "type": "integer",
+                                "format": "int64"
+                            },
+                            "Name": {
+                                "type": "string"
+                            },
+                            "Type": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "CorporationUpdate": {
+                "type": "object",
+                "description": "Request body for updating a corporation",
+                "properties": {
+                    "Name": {
+                        "type": "string",
+                        "description": "New name for the corporation"
+                    }
+                }
+            }
+        }
+    }
+}

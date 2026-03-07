@@ -2,7 +2,9 @@ namespace NodeJS {
     export interface ProcessEnv {
         DEFAULT_QUERY_LIMIT: string;
         LOG_LEVEL: string;
-        DB_CONN_STRING: string;
+        DB_HOST: string;
+        DB_USER: string;
+        DB_PASS: string;
         DB_NAME: string;
         BACKEND_PORT: string;
         SSL_CERT: string;
@@ -15,5 +17,8 @@ namespace NodeJS {
         SWAG_VERSION: string;
         SWAG_HOST: string;
         SWAG_BASE_PATH: string;
+        EVE_CLIENT_ID: string;
+        EVE_SECRET_KEY: string;
+        EVE_CALLBACK_URL: string;
     }
 }

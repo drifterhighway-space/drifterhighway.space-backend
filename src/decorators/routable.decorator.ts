@@ -1,9 +1,9 @@
-import { swagger } from "@models/swagger/swagger";
-import { swaggerMethod } from "@models/swagger/swaggermethod";
-import { swaggerPath } from "@models/swagger/swaggerpath";
 import Router, { Request, Response } from "express";
 import JWT from "jsonwebtoken";
 import { JWTPayload } from "../models/jwtpayload.model";
+import { swagger } from "../models/swagger/swagger.model";
+import { swaggerMethod } from "../models/swagger/swaggermethod.model";
+import { swaggerPath } from "../models/swagger/swaggerpath.model";
 require("dotenv").config();
 
 export const appRouter = Router();
@@ -61,13 +61,13 @@ function routable(options: IOptions) {
     return (
         target: any,
         propertyKey: string,
-        descriptor: PropertyDescriptor
+        descriptor: PropertyDescriptor,
     ) => {
         if (process.env.LOG_LEVEL === "INFO") {
             console.info(
                 `Setting up endpoint ${options.method.toUpperCase()}  \t/api${
                     options.path
-                }`
+                }`,
             );
         }
 
@@ -110,7 +110,7 @@ function routable(options: IOptions) {
             //Check JWT validity
             let jwt: JWTPayload = new JWTPayload({
                 name: "",
-                sub: "",
+                sub: -1,
                 perm: [],
                 exp: new Date(),
             });
