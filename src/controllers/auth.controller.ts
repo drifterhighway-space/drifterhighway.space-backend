@@ -4,7 +4,8 @@ import routable from "../decorators/routable.decorator";
 import CharacterModel from "../models/character.model";
 import { JWTPayload } from "../models/jwtpayload.model";
 import UserModel from "../models/user.model";
-import { DbUtilities as DB } from "../utilities/db-utilities";
+import { DbUtilities as DB } from "../utilities/db/mongo";
+import { ObjectNotFoundError } from "../utilities/errors";
 import ESI from "../utilities/esi.utilities";
 import controller from "./controller";
 
@@ -51,13 +52,17 @@ export default class AuthController implements controller {
 
         // Decode access token to get character ID
         const decodedAccess = JWT.decode(access) as AccessToken;
-        const characterID = Number(decodedAccess.sub.split(":")[2]);
+        const characterID = String(decodedAccess.sub.split(":")[2]);
 
         // Query database for existing character
-        const character = await DB.Get(
+        let character = await DB.Get(
             characterID,
             CharacterModel.GetFactory(),
-        );
+        ).catch((e) => {
+            if (e instanceof ObjectNotFoundError) {
+                return null;
+            }
+        });
 
         // Create new user and character if character doesn't exist
         if (!character) {
@@ -66,33 +71,36 @@ export default class AuthController implements controller {
             const uRes = await DB.Insert(user, UserModel.GetFactory());
 
             // Handle user insertion errors
-            if (uRes.affectedRows !== 1) {
-                res.sendStatus(500);
-                console.error(uRes);
-                throw new Error("Unable to insert User");
-            }
+            // if (uRes.affectedRows !== 1) {
+            //     res.sendStatus(500);
+            //     console.error(uRes);
+            //     throw new Error("Unable to insert User");
+            // }
 
             // Fetch character affiliations from EVE API
             const affiliations = await ESI.GetCharacterAffiliations([
-                characterID,
+                Number(characterID),
             ]);
 
             // Create character record with affiliations
-            const char = CharacterModel.Make(
+            character = CharacterModel.Make(
                 decodedAccess.name,
-                uRes.insertId,
+                jwt.sub,
                 refresh,
                 access,
                 affiliations[0].corporation_id,
             );
-            const cRes = await DB.Insert(char, CharacterModel.GetFactory());
+            const cRes = await DB.Insert(
+                character,
+                CharacterModel.GetFactory(),
+            );
 
             // Handle character insertion errors
-            if (cRes.affectedRows !== 1) {
-                res.sendStatus(500);
-                console.error(cRes);
-                throw new Error("Unable to insert Character");
-            }
+            // if (cRes.affectedRows !== 1) {
+            //     res.sendStatus(500);
+            //     console.error(cRes);
+            //     throw new Error("Unable to insert Character");
+            // }
         }
 
         // Retrieve user record from database
@@ -141,6 +149,62 @@ export default class AuthController implements controller {
         res: Response,
         jwt: JWTPayload,
     ): Promise<void> {
+        console.log(jwt);
+        // Exchange OAuth code for EVE tokens
+        const [access, refresh] = await ESI.GetTokens(
+            req.body.code ?? req.query.code,
+        ).catch((e) => {
+            throw e;
+        });
+        // Decode access token to get character ID
+        const decodedAccess = JWT.decode(access) as AccessToken;
+        const characterID = String(decodedAccess.sub.split(":")[2]);
+
+        const user = await DB.Get(jwt.sub, UserModel.GetFactory());
+
+        if (!user) {
+            res.status(400).send("INVALID USER");
+            return;
+        }
+
+        // Query database for existing character
+        const character = await DB.Get(
+            characterID,
+            CharacterModel.GetFactory(),
+        ).catch((e) => {
+            if (e instanceof ObjectNotFoundError) {
+                return null;
+            }
+        });
+
+        // Create new user and character if character doesn't exist
+        if (!character) {
+            // Fetch character affiliations from EVE API
+            const affiliations = await ESI.GetCharacterAffiliations([
+                Number(characterID),
+            ]);
+
+            // Create character record with affiliations
+            const char = CharacterModel.Make(
+                characterID,
+                decodedAccess.name,
+                jwt.sub,
+                refresh,
+                access,
+                affiliations[0].corporation_id,
+            );
+            await DB.Insert(char, CharacterModel.GetFactory())
+                .then(() => {
+                    res.status(201).send(char);
+                })
+                .catch((e) => {
+                    if (e instanceof ObjectNotFoundError) {
+                        res.status(500).send("FAILED TO INSERT CHARACTER");
+                        console.error(e);
+                        return;
+                    }
+                });
+        }
         // TODO: Add character if not exist
         // TODO: Update refreshToken for existing character
         return;
@@ -166,6 +230,8 @@ export default class AuthController implements controller {
         res: Response,
         jwt: JWTPayload,
     ): Promise<void> {
+        console.log(jwt);
+
         // TODO: Add/discord tokens
         return;
     }

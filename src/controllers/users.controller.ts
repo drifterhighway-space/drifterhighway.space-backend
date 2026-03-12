@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import routable from "../decorators/routable.decorator";
 import { JWTPayload } from "../models/jwtpayload.model";
 import UserModel, { UserStatus } from "../models/user.model";
-import { DbUtilities as DB } from "../utilities/db-utilities";
+import { DbUtilities as DB } from "../utilities/db/mongo";
 import controller from "./controller";
 
 export default class UsersController implements controller {
@@ -14,7 +14,7 @@ export default class UsersController implements controller {
         auth: true,
     })
     public async GetUsers(req: Request, res: Response, jwt: JWTPayload) {
-        if (jwt.sub !== 0) {
+        if (jwt.sub !== "092c4245-b86d-435a-9c79-67c6f98dff85") {
             res.sendStatus(401);
             return;
         }
@@ -34,7 +34,10 @@ export default class UsersController implements controller {
         auth: true,
     })
     public async GetUser(req: Request, res: Response, jwt: JWTPayload) {
-        if (jwt.sub !== 0 && jwt.sub !== Number(req.params.id)) {
+        if (
+            jwt.sub !== "092c4245-b86d-435a-9c79-67c6f98dff85" &&
+            jwt.sub !== req.params.id
+        ) {
             res.sendStatus(401);
             return;
         }
@@ -70,7 +73,10 @@ export default class UsersController implements controller {
         auth: true,
     })
     public async DeleteUser(req: Request, res: Response, jwt: JWTPayload) {
-        if (jwt.sub !== 0 && jwt.sub !== Number(req.params.id)) {
+        if (
+            jwt.sub !== "092c4245-b86d-435a-9c79-67c6f98dff85" &&
+            jwt.sub !== req.params.id
+        ) {
             res.sendStatus(401);
             return;
         }

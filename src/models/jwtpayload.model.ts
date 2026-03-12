@@ -22,7 +22,7 @@ export class JWTPayload {
      * @description JWT Subject (RFC 7519) - The principal that is the subject of the JWT
      */
     // subject
-    public sub: number;
+    public sub: string;
 
     /**
      * @description JWT Expiration (RFC 7519) - Numeric date when JWT expires

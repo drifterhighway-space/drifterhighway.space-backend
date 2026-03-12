@@ -20,5 +20,6 @@ namespace NodeJS {
         EVE_CLIENT_ID: string;
         EVE_SECRET_KEY: string;
         EVE_CALLBACK_URL: string;
+        ADMIN_ID: string;
     }
 }

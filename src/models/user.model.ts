@@ -15,7 +15,7 @@ export default class UserModel implements Identifiable {
     /**
      * @description Unique identifier for the user (primary key)
      */
-    public ID: number;
+    public ID: string;
 
     /**
      * @description Name of the user

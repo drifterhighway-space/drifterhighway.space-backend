@@ -7,5 +7,5 @@ export interface Identifiable {
     /**
      * @description Optional unique identifier (used for read operations, not for inserts)
      */
-    ID?: number;
+    ID?: string | number;
 }

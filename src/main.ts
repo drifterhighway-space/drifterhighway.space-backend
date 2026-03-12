@@ -19,7 +19,7 @@ const cors = require("cors");
 app.use(
     cors({
         origin: "*",
-    })
+    }),
 );
 
 app.use(appRouter);
@@ -50,7 +50,7 @@ appRouter.use("/docs", swaggerUI.setup(swaggerDeff, options));
 appRouter.get("/", (req: Request, res: Response) => [res.redirect("/docs")]);
 
 app.get("/swagger.json", (req: Request, res: Response) =>
-    res.status(200).send(JSON.stringify({ ...swaggerDeff, ...options }))
+    res.status(200).send(JSON.stringify({ ...swaggerDeff, ...options })),
 );
 
 if (process.env.SSL_ENABLED === "true") {
@@ -61,14 +61,14 @@ if (process.env.SSL_ENABLED === "true") {
                 key: fs.readFileSync(process.env.SSL_PKEY),
                 cert: fs.readFileSync(process.env.SSL_CERT),
             },
-            app
+            app,
         )
         .listen(process.env.BACKEND_PORT, () =>
-            console.log(`listening on ${process.env.BACKEND_PORT}`)
+            console.log(`listening on ${process.env.BACKEND_PORT}`),
         );
 } else {
     app.listen(process.env.BACKEND_PORT, () =>
-        console.log(`listening on ${process.env.BACKEND_PORT}`)
+        console.log(`listening on ${process.env.BACKEND_PORT}`),
     );
 }
 //Any thrown error will return a 500.
@@ -84,6 +84,6 @@ app.use((req, res, next) => {
 });
 
 //Catch and log any uncaught exception
-process.on("uncaughtException", (e) => {
-    console.error(e);
-});
+// process.on("uncaughtException", (e) => {
+//     console.error(e);
+// });

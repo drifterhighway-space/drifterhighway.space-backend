@@ -1,9 +1,8 @@
-import CorporationModel from "./corporation.model";
 import { Factory } from "./factory.model";
+import { GroupEntity } from "./groupEntity.model";
 import { Identifiable } from "./identifiable.model";
 import Location from "./location.model";
-import Ship from "./ship.model";
-import Token from "./tokens.model";
+import Token from "./token.model";
 
 /**
  * @description
@@ -19,12 +18,12 @@ export default class CharacterModel implements Identifiable {
     /**
      * @description ID of the user who owns this character
      */
-    public User: number;
+    public User: string;
 
     /**
      * @description Unique identifier for the character (primary key)
      */
-    public ID: number;
+    public ID: string;
 
     /**
      * @description Name of the character
@@ -34,7 +33,7 @@ export default class CharacterModel implements Identifiable {
     /**
      * @description Corporation associated with this character
      */
-    public Corporation: CorporationModel;
+    public Corporation: GroupEntity;
 
     /**
      * @description Optional refresh token for authentication
@@ -61,6 +60,8 @@ export default class CharacterModel implements Identifiable {
      */
     public Status: CharacterStatus;
 
+    public LastUpdate: Date;
+
     /**
      * @constructor Creates a new CharacterModel instance
      * @param json - JSON object containing character data
@@ -84,38 +85,46 @@ export default class CharacterModel implements Identifiable {
             throw new Error("Character requires Status");
         else this.Status = json.Status;
 
+        if (json.LastUpdate === undefined)
+            throw new Error("Character requires LastUpdate");
+        else this.LastUpdate = json.LastUpdate;
+
         this.Ship = json.Ship;
         this.RefreshToken = json.RefreshToken;
         this.AccessToken = json.AccessToken;
+        this.Location = json.Location;
     }
 
     /**
-     * @description Creates a new CharacterModel instance with default values
+     * @description Creates a new CharacterModel instance with specified fields
+     * @param id - Unique identifier for the character
      * @param name - Name of the character
      * @param user - ID of the user who owns this character
      * @param refreshToken - Refresh token string
      * @param accessToken - Access token string
-     * @param corp - Optional corporation ID
+     * @param corp - Optional corporation entity
      * @param ship - Optional ship object
-     * @returns New CharacterModel instance
+     * @returns New CharacterModel instance with default Status set to Active
      */
     public static Make(
+        id: number | string,
         name: string,
-        user: number,
+        user: string,
         refreshToken: string,
         accessToken: string,
-        corp?: number,
+        corp?: GroupEntity,
         ship?: Ship,
     ) {
         return new CharacterModel({
-            ID: -1,
+            ID: id,
             Name: name,
             User: user,
-            Corporation: new CorporationModel({ ID: corp }),
+            Corporation: corp,
             Ship: ship,
             AccessToken: accessToken,
             RefreshToken: refreshToken,
-            Status: CharacterStatus.Active,
+            Status: CharacterStatus.Pending,
+            LastUpdate: new Date(0),
         });
     }
 
@@ -162,4 +171,17 @@ export enum CharacterStatus {
      */
     Pending,
     ManualAdd,
+}
+
+export interface CharacterDTX {
+    ID: number;
+    Name: string;
+    SolarSystemID: number;
+    ShipHullID: number;
+}
+
+export interface Ship {
+    ID: number;
+    Name: string;
+    TypeName: String;
 }
