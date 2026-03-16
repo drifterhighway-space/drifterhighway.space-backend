@@ -60,3 +60,10 @@ export default class SystemModel implements Identifiable {
         })();
     }
 }
+
+export interface SolarSystemDTX {
+    ID: number;
+    Name: TranslatedField;
+    RegionID: number;
+    ConstellationID: number;
+}

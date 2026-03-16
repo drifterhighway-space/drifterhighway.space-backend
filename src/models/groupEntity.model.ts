@@ -15,6 +15,8 @@ export interface GroupEntity {
      */
     Name: String;
 
+    Ticker?: string;
+
     /**
      * @description Type of group entity (Corporation or Alliance)
      */

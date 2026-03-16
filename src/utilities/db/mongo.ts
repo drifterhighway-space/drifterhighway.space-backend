@@ -55,7 +55,7 @@ export class DbUtilities {
     static async Update<T extends Identifiable>(o: T, factory: Factory<T>) {
         const dbClient = new MongoClient(DbUtilities.CONNECTION_STRING);
         try {
-            const query = { id: o.ID };
+            const query = { ID: o.ID };
             await dbClient.connect();
             const database = dbClient.db(process.env.MONGO_DBNAME);
             const collection = database.collection(factory.CollectionName);
@@ -73,7 +73,7 @@ export class DbUtilities {
     static async Upsert<T extends Identifiable>(o: T, factory: Factory<T>) {
         const dbClient = new MongoClient(DbUtilities.CONNECTION_STRING);
         try {
-            const query = { id: o.ID };
+            const query = { ID: o.ID };
             await dbClient.connect();
             const database = dbClient.db(process.env.MONGO_DBNAME);
             const collection = database.collection(factory.CollectionName);
@@ -101,7 +101,7 @@ export class DbUtilities {
             await dbClient.connect();
             const database = dbClient.db(process.env.MONGO_DBNAME);
             const collection = database.collection(factory.CollectionName);
-            const query = { id: o.ID };
+            const query = { ID: o.ID };
             const data = await collection.deleteOne(query);
             if (!data) {
                 throw new Error("Error deleting object with id " + o.ID + ".");

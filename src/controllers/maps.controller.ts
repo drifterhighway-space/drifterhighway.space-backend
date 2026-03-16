@@ -8,7 +8,7 @@ import CharacterModel, {
 import { JWTPayload } from "../models/jwtpayload.model";
 import ConstellationModel from "../models/map/constellation";
 import RegionModel, { RegionDTX } from "../models/map/region.model";
-import SystemModel from "../models/map/system.model";
+import SystemModel, { SolarSystemDTX } from "../models/map/system.model";
 import { DbUtilities as DB } from "../utilities/db/mongo";
 import controller from "./controller";
 
@@ -120,8 +120,13 @@ export default class MapsController implements controller {
         res: Response,
         jwt: JWTPayload,
     ): Promise<CharacterDTX[]> {
+        const solarSystems = await DB.Query(
+            { RegionID: Number(req.params.id) },
+            SystemModel.GetFactory(),
+        );
+
         const chars = await DB.Query(
-            { "Location.Region.ID": Number(req.params.id) },
+            { "Location.ID": { $in: solarSystems.map((s) => s.ID) } },
             CharacterModel.GetFactory(),
         );
         res.status(200).send(chars);
@@ -142,5 +147,29 @@ export default class MapsController implements controller {
             .then((r) => {
                 res.status(r.status).send(r.data);
             });
+    }
+
+    @routable({
+        path: "/maps/solarsystems",
+        method: "get",
+    })
+    public async GetSolarSystems(
+        req: Request,
+        res: Response,
+        jwt: JWTPayload,
+    ): Promise<void> {
+        const systems = await DB.Query({}, SystemModel.GetFactory());
+
+        const results: SolarSystemDTX[] = [];
+
+        for (let system of systems) {
+            results.push({
+                ID: system.ID,
+                Name: system.Name,
+                RegionID: system.RegionID,
+                ConstellationID: system.ConstellationID,
+            });
+        }
+        res.status(200).send(results);
     }
 }

@@ -55,7 +55,7 @@ export default class CharacterController implements controller {
     @routable({
         path: "/characters",
         method: "get",
-        //auth: false,
+        auth: true,
     })
     public async GetCharacters(
         req: Request,
@@ -63,20 +63,19 @@ export default class CharacterController implements controller {
         jwt: JWTPayload,
     ): Promise<void> {
         // Validate that the requesting user is an admin (sub === 0)
-        // if (jwt.sub !== process.env.ADMIN_ID) {
-        //     res.sendStatus(401);
-        //     return;
-        // }
+        let query = {
+            $and: [
+                { Status: { $not: { $eq: CharacterStatus.Inactive } } },
+                { User: Number(jwt.sub) },
+            ],
+        };
 
         // Query the database for all characters with Active status
-        let character = await DB.Query(
-            { Status: { $not: { $eq: CharacterStatus.Inactive } } },
-            CharacterModel.GetFactory(),
-        );
+        let character = await DB.Query(query, CharacterModel.GetFactory());
 
         // Return character list if any active characters exist
         if (character.length > 0) res.status(200).send(character);
-        else res.sendStatus(404);
+        else res.status(200).send([]);
 
         return;
     }

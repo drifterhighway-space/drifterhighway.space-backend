@@ -2,7 +2,9 @@ import { Request, Response } from "express";
 import JWT from "jsonwebtoken";
 import routable from "../decorators/routable.decorator";
 import CharacterModel from "../models/character.model";
+import { GroupEntityType } from "../models/groupEntity.model";
 import { JWTPayload } from "../models/jwtpayload.model";
+import { TokenType } from "../models/token.model";
 import UserModel from "../models/user.model";
 import { DbUtilities as DB } from "../utilities/db/mongo";
 import { ObjectNotFoundError } from "../utilities/errors";
@@ -52,68 +54,30 @@ export default class AuthController implements controller {
 
         // Decode access token to get character ID
         const decodedAccess = JWT.decode(access) as AccessToken;
-        const characterID = String(decodedAccess.sub.split(":")[2]);
+        const characterID = Number(decodedAccess.sub.split(":")[2]);
 
-        // Query database for existing character
-        let character = await DB.Get(
-            characterID,
-            CharacterModel.GetFactory(),
-        ).catch((e) => {
-            if (e instanceof ObjectNotFoundError) {
-                return null;
-            }
-        });
+        let user = await DB.Get(characterID, UserModel.GetFactory()).catch(
+            (e) => {
+                if (e instanceof ObjectNotFoundError) return;
+            },
+        );
 
         // Create new user and character if character doesn't exist
-        if (!character) {
+        if (!user) {
             // Create new user record from EVE account name
-            const user = UserModel.Make(decodedAccess.name);
-            const uRes = await DB.Insert(user, UserModel.GetFactory());
-
-            // Handle user insertion errors
-            // if (uRes.affectedRows !== 1) {
-            //     res.sendStatus(500);
-            //     console.error(uRes);
-            //     throw new Error("Unable to insert User");
-            // }
-
-            // Fetch character affiliations from EVE API
-            const affiliations = await ESI.GetCharacterAffiliations([
-                Number(characterID),
-            ]);
-
-            // Create character record with affiliations
-            character = CharacterModel.Make(
-                decodedAccess.name,
-                jwt.sub,
-                refresh,
-                access,
-                affiliations[0].corporation_id,
-            );
-            const cRes = await DB.Insert(
-                character,
-                CharacterModel.GetFactory(),
-            );
-
-            // Handle character insertion errors
-            // if (cRes.affectedRows !== 1) {
-            //     res.sendStatus(500);
-            //     console.error(cRes);
-            //     throw new Error("Unable to insert Character");
-            // }
+            user = UserModel.Make(Number(characterID), decodedAccess.name);
+            await DB.Insert(user, UserModel.GetFactory());
+            user = await DB.Get(Number(characterID), UserModel.GetFactory());
         }
-
-        // Retrieve user record from database
-        const user = await DB.Get(character.User, UserModel.GetFactory());
 
         // Create JWT payload with 30-minute expiration
         const payload = new JWTPayload({
             iss: process.env.JWT_ISSUER,
             aud: "drifterhighway.space",
-            sub: user.ID,
-            exp: Date.now() + 60 * 60 * 30,
+            sub: characterID,
+            exp: Date.now() + 60 * 60 * 30 * 1000,
             iat: new Date().getTime(),
-            user: { Name: character.Name },
+            user: { Name: user.Name },
         });
 
         const token = JWT.sign(
@@ -177,13 +141,13 @@ export default class AuthController implements controller {
             }
         });
 
+        // Fetch character affiliations from EVE API
+        const affiliations = (
+            await ESI.GetCharacterAffiliations([Number(characterID)])
+        )[0];
+
         // Create new user and character if character doesn't exist
         if (!character) {
-            // Fetch character affiliations from EVE API
-            const affiliations = await ESI.GetCharacterAffiliations([
-                Number(characterID),
-            ]);
-
             // Create character record with affiliations
             const char = CharacterModel.Make(
                 characterID,
@@ -191,7 +155,11 @@ export default class AuthController implements controller {
                 jwt.sub,
                 refresh,
                 access,
-                affiliations[0].corporation_id,
+                {
+                    ID: affiliations.corporation_id,
+                    Name: "",
+                    Type: GroupEntityType.Corporation,
+                },
             );
             await DB.Insert(char, CharacterModel.GetFactory())
                 .then(() => {
@@ -204,6 +172,35 @@ export default class AuthController implements controller {
                         return;
                     }
                 });
+        } else {
+            character.Corporation = {
+                ID: affiliations.corporation_id,
+                Type: GroupEntityType.Corporation,
+                Name: "",
+            };
+            if (affiliations.alliance_id) {
+                character.Corporation.Parent = {
+                    ID: affiliations.alliance_id,
+                    Name: "",
+                    Type: GroupEntityType.Alliance,
+                };
+            }
+            character.AccessToken = {
+                Token: access,
+                Type: TokenType.Access,
+                Expires: new Date(Date.now() + 20 * 60 * 1000),
+                Scopes: [],
+            };
+            character.RefreshToken = {
+                Token: refresh,
+                Type: TokenType.Refresh,
+                Expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                Scopes: [],
+            };
+
+            await DB.Update(character, CharacterModel.GetFactory());
+
+            res.status(202).send(character);
         }
         // TODO: Add character if not exist
         // TODO: Update refreshToken for existing character

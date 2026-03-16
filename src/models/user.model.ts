@@ -55,9 +55,9 @@ export default class UserModel implements Identifiable {
      * @param name - Name of the user
      * @returns New UserModel instance
      */
-    public static Make(name: string): UserModel {
+    public static Make(id: number, name: string): UserModel {
         return new UserModel({
-            ID: -1,
+            ID: id,
             Name: name,
             Status: UserStatus.Active,
         });

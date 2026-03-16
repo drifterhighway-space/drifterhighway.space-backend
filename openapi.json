@@ -43,13 +43,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/JWTToken"
+                                    "type": "object",
+                                    "properties": {
+                                        "token": {
+                                            "type": "string",
+                                            "description": "JWT token string"
+                                        }
+                                    }
                                 }
                             }
                         }
                     },
-                    "500": {
-                        "description": "Internal server error - user or character insertion failed"
+                    "400": {
+                        "description": "Bad request - invalid code"
                     }
                 }
             }
@@ -65,9 +71,33 @@
                         "bearerAuth": []
                     }
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "description": "OAuth authorization code from EVE Online"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "Character added or refresh token updated successfully"
+                    },
+                    "201": {
+                        "description": "Character created successfully"
+                    },
+                    "202": {
+                        "description": "Character updated successfully"
+                    },
+                    "400": {
+                        "description": "Invalid user"
                     },
                     "401": {
                         "description": "Unauthorized - valid JWT token required"
@@ -131,10 +161,9 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "description": "Region ID"
+                            "type": "string",
+                            "description": "Region ID"
+                        }
                     }
                 ],
                 "responses": {
@@ -169,10 +198,9 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "description": "Region ID"
+                            "type": "string",
+                            "description": "Region ID"
+                        }
                     }
                 ],
                 "responses": {
@@ -184,6 +212,53 @@
                                     "type": "array",
                                     "items": {
                                         "$ref": "#/components/schemas/CharacterDTX"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/maps/svg/{name}": {
+            "get": {
+                "tags": ["Maps"],
+                "summary": "Fetch Base Map SVG",
+                "description": "Fetch a base SVG map from EveMaps/Dotlan",
+                "operationId": "FetchBaseMapSVG",
+                "parameters": [
+                    {
+                        "name": "name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "Name of the map (e.g., eve_faction)"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SVG map data returned"
+                    }
+                }
+            }
+        },
+        "/maps/solarsystems": {
+            "get": {
+                "tags": ["Maps", "Solar Systems"],
+                "summary": "Get All Solar Systems",
+                "description": "Retrieve all solar systems from the database.",
+                "operationId": "GetSolarSystems",
+                "responses": {
+                    "200": {
+                        "description": "List of solar systems",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/SolarSystemDTX"
                                     }
                                 }
                             }
@@ -242,10 +317,7 @@
                         }
                     },
                     "401": {
-                        "description": "Unauthorized - valid JWT token required"
-                    },
-                    "404": {
-                        "description": "No characters found"
+                        "description": "Unauthorized - admin access required"
                     }
                 }
             }
@@ -267,10 +339,9 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "description": "Character ID"
+                            "type": "string",
+                            "description": "Character ID"
+                        }
                     }
                 ],
                 "responses": {
@@ -285,7 +356,7 @@
                         }
                     },
                     "401": {
-                        "description": "Unauthorized"
+                        "description": "Unauthorized - not admin or character owner"
                     }
                 }
             },
@@ -305,10 +376,9 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "description": "Character ID"
+                            "type": "string",
+                            "description": "Character ID"
+                        }
                     }
                 ],
                 "requestBody": {
@@ -330,13 +400,16 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized - not admin or character owner"
                     }
                 }
             },
             "delete": {
                 "tags": ["Characters"],
                 "summary": "Delete Character",
-                "description": "Delete (deactivate) a character by ID. Character is marked as Inactive.",
+                "description": "Delete (soft delete) a character by ID. Character is marked as Inactive.",
                 "operationId": "DeleteCharacter",
                 "security": [
                     {
@@ -349,10 +422,9 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "description": "Character ID"
+                            "type": "string",
+                            "description": "Character ID"
+                        }
                     }
                 ],
                 "responses": {
@@ -360,75 +432,51 @@
                         "description": "Character deleted successfully"
                     },
                     "401": {
-                        "description": "Unauthorized"
+                        "description": "Unauthorized - not admin or character owner"
                     }
                 }
             }
         },
-        "/corporations": {
+        "/users": {
             "get": {
-                "tags": ["Corporations"],
-                "summary": "Get All Corporations",
-                "description": "Retrieve all corporations from the database.",
-                "operationId": "GetCorporations",
+                "tags": ["Users"],
+                "summary": "Get All Users",
+                "description": "Retrieve all active users from the database.",
+                "operationId": "GetUsers",
                 "security": [
                     {
                         "bearerAuth": []
                     }
                 ],
-                "parameters": [
-                    {
-                        "name": "page",
-                        "in": "query",
-                        "description": "Which page of results to return",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 1,
-                            "minimum": 1
-                        }
-                    },
-                    {
-                        "name": "limit",
-                        "in": "query",
-                        "description": "How many results to return",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 10,
-                            "maximum": 100
-                        }
-                    }
-                ],
                 "responses": {
                     "200": {
-                        "description": "List of corporations",
+                        "description": "List of users",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "array",
                                     "items": {
-                                        "$ref": "#/components/schemas/Corporation"
+                                        "$ref": "#/components/schemas/User"
                                     }
                                 }
                             }
                         }
                     },
                     "401": {
-                        "description": "Unauthorized - valid JWT token required"
+                        "description": "Unauthorized - admin access required"
                     },
                     "404": {
-                        "description": "No corporations found"
+                        "description": "No users found"
                     }
                 }
             }
         },
-        "/corporations/{id}": {
+        "/users/{id}": {
             "get": {
-                "tags": ["Corporations"],
-                "summary": "Get Corporation by ID",
-                "description": "Retrieve a specific corporation by ID.",
-                "operationId": "GetCorporation",
+                "tags": ["Users"],
+                "summary": "Get User by ID",
+                "description": "Retrieve a specific user by ID.",
+                "operationId": "GetUser",
                 "security": [
                     {
                         "bearerAuth": []
@@ -440,33 +488,32 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "description": "Corporation ID"
+                            "type": "string",
+                            "description": "User ID"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Corporation found",
+                        "description": "User found",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Corporation"
+                                    "$ref": "#/components/schemas/User"
                                 }
                             }
                         }
                     },
                     "401": {
-                        "description": "Unauthorized"
+                        "description": "Unauthorized - not admin or user owner"
                     }
                 }
             },
             "put": {
-                "tags": ["Corporations"],
-                "summary": "Update Corporation",
-                "description": "Update a corporation by ID.",
-                "operationId": "UpdateCorporation",
+                "tags": ["Users"],
+                "summary": "Update User",
+                "description": "Update a user by ID.",
+                "operationId": "UpdateUser",
                 "security": [
                     {
                         "bearerAuth": []
@@ -478,31 +525,56 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "description": "Corporation ID"
+                            "type": "string",
+                            "description": "User ID"
+                        }
                     }
                 ],
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/CorporationUpdate"
+                                "$ref": "#/components/schemas/UserUpdate"
                             }
                         }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "Corporation updated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Corporation"
-                                }
-                            }
+                        "description": "User updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized - not admin or user owner"
+                    }
+                }
+            },
+            "delete": {
+                "tags": ["Users"],
+                "summary": "Delete User",
+                "description": "Delete (soft delete) a user by ID. User is marked as Inactive.",
+                "operationId": "DeleteUser",
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "description": "User ID"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized - not admin or user owner"
                     }
                 }
             }
@@ -576,6 +648,31 @@
                         "type": "integer",
                         "format": "int64",
                         "description": "The last system this character scouted"
+                    }
+                }
+            },
+            "SolarSystemDTX": {
+                "type": "object",
+                "description": "Solar system data transfer object",
+                "properties": {
+                    "ID": {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Unique identifier for the solar system"
+                    },
+                    "Name": {
+                        "type": "string",
+                        "description": "Name of the solar system"
+                    },
+                    "RegionID": {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Region ID this system belongs to"
+                    },
+                    "ConstellationID": {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Constellation ID this system belongs to"
                     }
                 }
             },
@@ -665,12 +762,48 @@
                         ]
                     },
                     "RefreshToken": {
-                        "type": "string",
-                        "description": "Optional refresh token for authentication"
+                        "type": "object",
+                        "description": "Optional refresh token for authentication",
+                        "properties": {
+                            "Token": {
+                                "type": "string"
+                            },
+                            "Type": {
+                                "type": "string"
+                            },
+                            "Expires": {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "Scopes": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     },
                     "AccessToken": {
-                        "type": "string",
-                        "description": "Optional access token for authentication"
+                        "type": "object",
+                        "description": "Optional access token for authentication",
+                        "properties": {
+                            "Token": {
+                                "type": "string"
+                            },
+                            "Type": {
+                                "type": "string"
+                            },
+                            "Expires": {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "Scopes": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     },
                     "Location": {
                         "type": "object",
@@ -711,52 +844,6 @@
                     "Name": {
                         "type": "string",
                         "description": "New name for the character"
-                    }
-                }
-            },
-            "Corporation": {
-                "type": "object",
-                "description": "Corporation entity from the database",
-                "properties": {
-                    "ID": {
-                        "type": "integer",
-                        "format": "int64",
-                        "description": "Unique identifier for the corporation"
-                    },
-                    "Name": {
-                        "type": "string",
-                        "description": "Name of the corporation"
-                    },
-                    "Type": {
-                        "type": "string",
-                        "description": "Type of group entity",
-                        "enum": ["Corporation", "Alliance"]
-                    },
-                    "Parent": {
-                        "type": "object",
-                        "description": "Optional parent group entity reference",
-                        "properties": {
-                            "ID": {
-                                "type": "integer",
-                                "format": "int64"
-                            },
-                            "Name": {
-                                "type": "string"
-                            },
-                            "Type": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "CorporationUpdate": {
-                "type": "object",
-                "description": "Request body for updating a corporation",
-                "properties": {
-                    "Name": {
-                        "type": "string",
-                        "description": "New name for the corporation"
                     }
                 }
             }

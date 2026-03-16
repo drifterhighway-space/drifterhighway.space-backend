@@ -2,7 +2,8 @@ import { Factory } from "./factory.model";
 import { GroupEntity } from "./groupEntity.model";
 import { Identifiable } from "./identifiable.model";
 import Location from "./location.model";
-import Token from "./token.model";
+import Token, { TokenType } from "./token.model";
+import TranslatedField from "./translatedField.model";
 
 /**
  * @description
@@ -121,8 +122,8 @@ export default class CharacterModel implements Identifiable {
             User: user,
             Corporation: corp,
             Ship: ship,
-            AccessToken: accessToken,
-            RefreshToken: refreshToken,
+            AccessToken: { Token: accessToken, Type: TokenType.Access },
+            RefreshToken: { Token: refreshToken, Type: TokenType.Access },
             Status: CharacterStatus.Pending,
             LastUpdate: new Date(0),
         });
@@ -183,5 +184,5 @@ export interface CharacterDTX {
 export interface Ship {
     ID: number;
     Name: string;
-    TypeName: String;
+    TypeName: TranslatedField;
 }
