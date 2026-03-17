@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import routable from "../decorators/routable.decorator";
 import { JWTPayload } from "../models/jwtpayload.model";
-import UserModel, { UserStatus } from "../models/user.model";
+import UserModel, { UserPermissions, UserStatus } from "../models/user.model";
 import { DbUtilities as DB } from "../utilities/db/mongo";
 import controller from "./controller";
 
@@ -14,12 +14,12 @@ export default class UsersController implements controller {
         auth: true,
     })
     public async GetUsers(req: Request, res: Response, jwt: JWTPayload) {
-        if (jwt.sub !== "092c4245-b86d-435a-9c79-67c6f98dff85") {
+        if (!jwt.permissions.includes(UserPermissions.Admin)) {
             res.sendStatus(401);
             return;
         }
         let users = await DB.Query(
-            `Status = ${UserStatus.Active}`,
+            { Status: UserStatus.Active },
             UserModel.GetFactory(),
         );
 
@@ -35,7 +35,7 @@ export default class UsersController implements controller {
     })
     public async GetUser(req: Request, res: Response, jwt: JWTPayload) {
         if (
-            jwt.sub !== "092c4245-b86d-435a-9c79-67c6f98dff85" &&
+            !jwt.permissions.includes(UserPermissions.Admin) &&
             jwt.sub !== req.params.id
         ) {
             res.sendStatus(401);
@@ -65,6 +65,35 @@ export default class UsersController implements controller {
         auth: true,
     })
     public async UpdateUser(req: Request, res: Response, jwt: JWTPayload) {
+        if (
+            !jwt.permissions.includes(UserPermissions.Admin) &&
+            jwt.sub !== req.params.id
+        ) {
+            res.sendStatus(401);
+            return;
+        }
+
+        const current = await DB.Get(
+            Number(req.params.id),
+            UserModel.GetFactory(),
+        );
+        const newUser = new UserModel(req.body);
+
+        if (
+            !jwt.permissions.includes(UserPermissions.Admin) &&
+            (newUser.Permissions !== current.Permissions ||
+                newUser.ID !== current.ID ||
+                newUser.Name !== current.Name)
+        ) {
+            res.sendStatus(401);
+            console.error("USER ATTEMPTED TO MODIFY PERMISSIONS");
+            return;
+        }
+
+        await DB.Update(newUser, UserModel.GetFactory());
+
+        res.sendStatus(202);
+
         return;
     }
     @routable({
@@ -74,7 +103,7 @@ export default class UsersController implements controller {
     })
     public async DeleteUser(req: Request, res: Response, jwt: JWTPayload) {
         if (
-            jwt.sub !== "092c4245-b86d-435a-9c79-67c6f98dff85" &&
+            !jwt.permissions.includes(UserPermissions.Admin) &&
             jwt.sub !== req.params.id
         ) {
             res.sendStatus(401);
