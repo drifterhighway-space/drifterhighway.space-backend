@@ -31,6 +31,30 @@ export default class ConnectionsController implements controller {
     }
 
     @routable({
+        path: `/${ConnectionModel.CollectionName}/:id`,
+        method: "put",
+        auth: false,
+    })
+    public async UpdateConnectionStatus(
+        req: Request,
+        res: Response,
+        jwt: JWTPayload,
+    ) {
+        const connection = await DB.Get(
+            req.params.id,
+            ConnectionModel.GetFactory(),
+        );
+
+        connection.Status = req.body.Status;
+
+        await DB.Update(connection, ConnectionModel.GetFactory());
+
+        res.status(200).send(
+            await DB.Get(connection.ID, ConnectionModel.GetFactory()),
+        );
+    }
+
+    @routable({
         path: `/${ConnectionModel.CollectionName}`,
         method: "post",
         auth: false,
