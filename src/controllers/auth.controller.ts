@@ -78,6 +78,7 @@ export default class AuthController implements controller {
             exp: Date.now() + 60 * 60 * 30 * 1000,
             iat: new Date().getTime(),
             user: { Name: user.Name },
+            permissions: user.Permissions,
         });
 
         const token = JWT.sign(

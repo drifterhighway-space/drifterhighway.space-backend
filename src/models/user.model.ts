@@ -32,6 +32,8 @@ export default class UserModel implements Identifiable {
      */
     public DiscordID?: string;
 
+    public Permissions: UserPermissions[];
+
     /**
      * @constructor Creates a new UserModel instance
      * @param json - JSON object containing user data
@@ -48,6 +50,7 @@ export default class UserModel implements Identifiable {
         else this.Status = json.Status;
 
         this.DiscordID = json.DiscordID;
+        this.Permissions = json.Permissions ?? [UserPermissions.Scouts];
     }
 
     /**
@@ -60,6 +63,7 @@ export default class UserModel implements Identifiable {
             ID: id,
             Name: name,
             Status: UserStatus.Active,
+            Permissions: [UserPermissions.Scouts],
         });
     }
 
@@ -97,4 +101,11 @@ export enum UserStatus {
      * @description Inactive user
      */
     Inactive,
+}
+
+export enum UserPermissions {
+    Admin,
+    Scouts,
+    Map,
+    Routes,
 }

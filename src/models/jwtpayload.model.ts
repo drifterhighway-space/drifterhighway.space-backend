@@ -1,3 +1,5 @@
+import { UserPermissions } from "./user.model";
+
 /**
  * @description
  * Represents a JWT Payload for authentication.
@@ -36,6 +38,8 @@ export class JWTPayload {
     // issued at
     public iat: number;
 
+    public permissions: UserPermissions[];
+
     public user?: { Name: string };
 
     /**
@@ -49,6 +53,7 @@ export class JWTPayload {
         this.aud = json.aud;
         this.iat = json.iat;
         this.user = json.user;
+        this.permissions = json.permissions ?? [UserPermissions.Scouts];
     }
 
     /**
